@@ -12,16 +12,26 @@
  */
 package org.web3j.crypto;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.SignatureException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.bouncycastle.math.ec.ECPoint;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.web3j.utils.Numeric;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.web3j.crypto.Sign.CHAIN_ID_INC;
+import static org.web3j.crypto.Sign.LOWER_REAL_V;
+import static org.web3j.crypto.Sign.REPLAY_PROTECTED_V_MIN;
 
 public class SignTest {
 
@@ -71,5 +81,73 @@ public class SignTest {
     public void testPublicKeyFromPrivatePoint() {
         ECPoint point = Sign.publicPointFromPrivate(SampleKeys.PRIVATE_KEY);
         assertEquals(Sign.publicFromPoint(point.getEncoded(false)), (SampleKeys.PUBLIC_KEY));
+    }
+
+    @Test
+    public void testSignTypedData() throws IOException {
+        String TEST_JSON_TYPED_DATA =
+                "{\"types\": {    \"EIP712Domain\": [      {\"name\": \"name\", \"type\": \"string\"},      {\"name\": \"version\", \"type\": \"string\"},      {\"name\": \"chainId\", \"type\": \"uint256\"},      {\"name\": \"verifyingContract\", \"type\": \"address\"}    ],    \"Person\": [      {\"name\": \"name\", \"type\": \"string\"},      {\"name\": \"wallet\", \"type\": \"address\"}    ]  },  \"domain\": {    \"name\": \"My Dapp\",    \"version\": \"1.0\",    \"chainId\": 1,    \"verifyingContract\": \"0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC\"  },  \"primaryType\": \"Person\",  \"message\": {    \"name\": \"John Doe\",    \"wallet\": \"0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B\"  }}";
+        Sign.SignatureData signature =
+                Sign.signTypedData(TEST_JSON_TYPED_DATA, SampleKeys.KEY_PAIR);
+        byte[] retval = new byte[65];
+        System.arraycopy(signature.getR(), 0, retval, 0, 32);
+        System.arraycopy(signature.getS(), 0, retval, 32, 32);
+        System.arraycopy(signature.getV(), 0, retval, 64, 1);
+        String signedMessage = Numeric.toHexString(retval);
+        assertEquals(
+                signedMessage,
+                "0x80361fd6c275c7492d00d976a48d0db4a663fb76da49a3c7d69c252f1c8cbea61438264a755d464e19bcd7c976b06640b40bd34de5f5c1456c0efe3b6626143a1c");
+    }
+
+    @ParameterizedTest(name = "testGetRecId(chainId={0}, recId={1}, isEip155={2})")
+    @MethodSource("recIdArguments")
+    public void testGetRecId(final long chainId, final long recId, final boolean isEip155) {
+        final long testV = isEip155 ? CHAIN_ID_INC + chainId * 2 + recId : LOWER_REAL_V + recId;
+        final Sign.SignatureData signedMsg =
+                new Sign.SignatureData((byte) testV, new byte[] {}, new byte[] {});
+
+        int recoveredRecId = Sign.getRecId(signedMsg, chainId);
+        assertEquals(recId, recoveredRecId);
+    }
+
+    @ParameterizedTest(name = "testGetRecIdWithInvalidVParam(v = {0})")
+    @MethodSource("invalidVSigningParams")
+    public void testGetRecIdWithInvalidVParam(final long invalidV) {
+        final Sign.SignatureData signedMsg =
+                new Sign.SignatureData((byte) invalidV, new byte[] {}, new byte[] {});
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Sign.getRecId(signedMsg, 1),
+                "Unsupported v parameter: " + invalidV);
+    }
+
+    public static List<Arguments> recIdArguments() {
+        final List<Long> chainIds = Arrays.asList(1L, 2L, 100L);
+        final List<Long> recIds = Arrays.asList(0L, 1L);
+        final List<Boolean> isEip155Options = Arrays.asList(true, false);
+
+        final List<Arguments> args = new ArrayList<>();
+        for (Long chainId : chainIds) {
+            for (Long recId : recIds) {
+                for (Boolean isEip155Option : isEip155Options) {
+                    args.add(Arguments.of(chainId, recId, isEip155Option));
+                }
+            }
+        }
+
+        return args;
+    }
+
+    public static List<Arguments> invalidVSigningParams() {
+        final List<Arguments> args = new ArrayList<>();
+        for (int i = 0; i < LOWER_REAL_V; i++) {
+            args.add(Arguments.of(i));
+        }
+        for (int i = LOWER_REAL_V + 2; i < REPLAY_PROTECTED_V_MIN; i++) {
+            args.add(Arguments.of(i));
+        }
+
+        return args;
     }
 }

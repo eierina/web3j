@@ -22,14 +22,14 @@ import org.web3j.rlp.RlpList;
 import org.web3j.rlp.RlpType;
 import org.web3j.utils.Numeric;
 
+import static org.web3j.crypto.Sign.CHAIN_ID_INC;
+import static org.web3j.crypto.Sign.LOWER_REAL_V;
+
 /**
  * Create RLP encoded transaction, implementation as per p4 of the <a
  * href="http://gavwood.com/paper.pdf">yellow paper</a>.
  */
 public class TransactionEncoder {
-
-    private static final int CHAIN_ID_INC = 35;
-    private static final int LOWER_REAL_V = 27;
 
     /**
      * Use for new transactions Eip1559 (this txs has a new field chainId) or an old one before
@@ -117,7 +117,7 @@ public class TransactionEncoder {
         RlpList rlpList = new RlpList(values);
         byte[] encoded = RlpEncoder.encode(rlpList);
 
-        if (rawTransaction.getType().isEip1559()) {
+        if (rawTransaction.getType().isEip1559() || rawTransaction.getType().isEip2930()) {
             return ByteBuffer.allocate(encoded.length + 1)
                     .put(rawTransaction.getType().getRlpType())
                     .put(encoded)

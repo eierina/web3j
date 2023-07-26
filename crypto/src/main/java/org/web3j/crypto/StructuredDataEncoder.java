@@ -29,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.web3j.abi.TypeEncoder;
@@ -36,10 +37,13 @@ import org.web3j.abi.datatypes.AbiTypes;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.utils.Numeric;
 
+import static org.web3j.abi.datatypes.Type.MAX_BYTE_LENGTH;
 import static org.web3j.crypto.Hash.sha3;
 import static org.web3j.crypto.Hash.sha3String;
 
 public class StructuredDataEncoder {
+    public static ObjectMapper mapper =
+            new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL);
     public final StructuredData.EIP712Message jsonMessageObject;
 
     // Matches array declarations like arr[5][10], arr[][], arr[][34][], etc.
@@ -65,6 +69,11 @@ public class StructuredDataEncoder {
     final String identifierRegex = "^[a-zA-Z_$][a-zA-Z_$0-9]*$";
     final Pattern identifierPattern = Pattern.compile(identifierRegex);
 
+    public StructuredDataEncoder(StructuredData.EIP712Message jsonMessageObject) {
+        validateStructuredData(jsonMessageObject);
+        this.jsonMessageObject = jsonMessageObject;
+    }
+
     public StructuredDataEncoder(String jsonMessageInString) throws IOException, RuntimeException {
         // Parse String Message into object and validate
         this.jsonMessageObject = parseJSONMessage(jsonMessageInString);
@@ -87,14 +96,20 @@ public class StructuredDataEncoder {
             remainingTypes.remove(remainingTypes.size() - 1);
             deps.add(structName);
 
-            for (StructuredData.Entry entry : types.get(primaryType)) {
-                if (!types.containsKey(entry.getType())) {
+            for (StructuredData.Entry entry : types.get(structName)) {
+                String declarationFieldTypeName = entry.getType();
+                String baseDeclarationTypeName =
+                        arrayTypePattern.matcher(declarationFieldTypeName).find()
+                                ? declarationFieldTypeName.substring(
+                                        0, declarationFieldTypeName.indexOf('['))
+                                : declarationFieldTypeName;
+                if (!types.containsKey(baseDeclarationTypeName)) {
                     // Don't expand on non-user defined types
-                } else if (deps.contains(entry.getType())) {
+                } else if (deps.contains(baseDeclarationTypeName)) {
                     // Skip types which are already expanded
                 } else {
                     // Encountered a user defined type
-                    remainingTypes.add(entry.getType());
+                    remainingTypes.add(baseDeclarationTypeName);
                 }
             }
         }
@@ -227,7 +242,23 @@ public class StructuredDataEncoder {
         try {
             if (baseType.toLowerCase().startsWith("uint")
                     || baseType.toLowerCase().startsWith("int")) {
-                hashBytes = convertToBigInt(data).toByteArray();
+                BigInteger value = convertToBigInt(data);
+                if (value.signum() >= 0) {
+                    hashBytes = Numeric.toBytesPadded(convertToBigInt(data), MAX_BYTE_LENGTH);
+                } else {
+                    byte signPadding = (byte) 0xff;
+                    byte[] rawValue = convertToBigInt(data).toByteArray();
+                    hashBytes = new byte[MAX_BYTE_LENGTH];
+                    for (int i = 0; i < hashBytes.length; i++) {
+                        hashBytes[i] = signPadding;
+                    }
+                    System.arraycopy(
+                            rawValue,
+                            0,
+                            hashBytes,
+                            MAX_BYTE_LENGTH - rawValue.length,
+                            rawValue.length);
+                }
             } else if (baseType.equals("string")) {
                 hashBytes = ((String) data).getBytes();
             } else if (baseType.equals("bytes")) {
@@ -408,27 +439,8 @@ public class StructuredDataEncoder {
 
     @SuppressWarnings("unchecked")
     public byte[] hashDomain() throws RuntimeException {
-        ObjectMapper oMapper = new ObjectMapper();
         HashMap<String, Object> data =
-                oMapper.convertValue(jsonMessageObject.getDomain(), HashMap.class);
-
-        if (data.get("chainId") != null) {
-            data.put("chainId", ((HashMap<String, Object>) data.get("chainId")).get("value"));
-        } else {
-            data.remove("chainId");
-        }
-
-        if (data.get("verifyingContract") != null) {
-            data.put(
-                    "verifyingContract",
-                    ((HashMap<String, Object>) data.get("verifyingContract")).get("value"));
-        } else {
-            data.remove("verifyingContract");
-        }
-
-        if (data.get("salt") == null) {
-            data.remove("salt");
-        }
+                mapper.convertValue(jsonMessageObject.getDomain(), HashMap.class);
         return sha3(encodeData("EIP712Domain", data));
     }
 
@@ -454,8 +466,6 @@ public class StructuredDataEncoder {
 
     public StructuredData.EIP712Message parseJSONMessage(String jsonMessageInString)
             throws IOException, RuntimeException {
-        ObjectMapper mapper = new ObjectMapper();
-
         // convert JSON string to EIP712Message object
         StructuredData.EIP712Message tempJSONMessageObject =
                 mapper.readValue(jsonMessageInString, StructuredData.EIP712Message.class);

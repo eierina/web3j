@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -47,14 +48,29 @@ public class StructuredDataTest {
                 Files.readAllBytes(Paths.get(jsonFile).toAbsolutePath()), StandardCharsets.UTF_8);
     }
 
+    private StructuredData.EIP712Message getResourceAsMessage(String jsonFile) throws IOException {
+        return new ObjectMapper()
+                .readValue(
+                        new String(
+                                Files.readAllBytes(Paths.get(jsonFile).toAbsolutePath()),
+                                StandardCharsets.UTF_8),
+                        StructuredData.EIP712Message.class);
+    }
+
     @Test
     public void testInvalidIdentifierMessageCaughtByRegex() throws RuntimeException {
         String invalidStructuredDataJSONFilePath =
                 "build/resources/test/"
                         + "structured_data_json_files/InvalidIdentifierStructuredData.json";
+
         assertThrows(
                 RuntimeException.class,
                 () -> new StructuredDataEncoder(getResource(invalidStructuredDataJSONFilePath)));
+        assertThrows(
+                RuntimeException.class,
+                () ->
+                        new StructuredDataEncoder(
+                                getResourceAsMessage(invalidStructuredDataJSONFilePath)));
     }
 
     @Test
@@ -65,6 +81,11 @@ public class StructuredDataTest {
         assertThrows(
                 RuntimeException.class,
                 () -> new StructuredDataEncoder(getResource(invalidStructuredDataJSONFilePath)));
+        assertThrows(
+                RuntimeException.class,
+                () ->
+                        new StructuredDataEncoder(
+                                getResourceAsMessage(invalidStructuredDataJSONFilePath)));
     }
 
     @Test
@@ -179,6 +200,18 @@ public class StructuredDataTest {
     }
 
     @Test
+    public void test0xProtocolControlSampleAsMessage() throws IOException {
+        StructuredDataEncoder dataEncoder =
+                new StructuredDataEncoder(
+                        getResourceAsMessage(
+                                "build/resources/test/"
+                                        + "structured_data_json_files/0xProtocolControlSample.json"));
+        assertEquals(
+                "0xccb29124860915763e8cd9257da1260abc7df668fde282272587d84b594f37f6",
+                Numeric.toHexString(dataEncoder.hashStructuredData()));
+    }
+
+    @Test
     public void testInvalidMessageValueTypeMismatch() throws RuntimeException, IOException {
         String invalidStructuredDataJSONFilePath =
                 "build/resources/test/"
@@ -186,6 +219,10 @@ public class StructuredDataTest {
         StructuredDataEncoder dataEncoder =
                 new StructuredDataEncoder(getResource(invalidStructuredDataJSONFilePath));
         assertThrows(ClassCastException.class, dataEncoder::hashStructuredData);
+
+        StructuredDataEncoder dataEncoderFromMessage =
+                new StructuredDataEncoder(getResourceAsMessage(invalidStructuredDataJSONFilePath));
+        assertThrows(ClassCastException.class, dataEncoderFromMessage::hashStructuredData);
     }
 
     @Test
@@ -222,6 +259,40 @@ public class StructuredDataTest {
                 Numeric.toHexString(dataEncoder.hashStructuredData()));
     }
 
+    @Test
+    public void testValidStructureWithValuesAsMessage() throws IOException {
+        StructuredDataEncoder dataEncoder =
+                new StructuredDataEncoder(
+                        getResourceAsMessage(
+                                "build/resources/test/"
+                                        + "structured_data_json_files/ValidStructuredDataWithValues.json"));
+
+        assertEquals(
+                "0x9a321bee2df12b3b43bc4caf71d19839f05d82264b780b48f1f529bf916b5d30",
+                Numeric.toHexString(dataEncoder.hashStructuredData()));
+    }
+
+    // EIP712 v4
+    @Test
+    public void testEncodeTypeWithArrays() throws IOException {
+        StructuredDataEncoder dataEncoder =
+                new StructuredDataEncoder(
+                        getResource(
+                                "build/resources/test/"
+                                        + "structured_data_json_files/ValidStructuredDataWithArrays.json")); // taken from https://danfinlay.github.io/js-eth-personal-sign-examples/ and updated to int,uint arrays
+        String expectedMailType =
+                "Mail(Person from,Group[] to,string contents)"
+                        + "Group(string name,Person[] members)"
+                        + "Person(string name,address[] wallets)";
+
+        assertEquals(dataEncoder.encodeType("Mail"), expectedMailType);
+
+        String expectedGroupType =
+                "Group(string name,Person[] members)" + "Person(string name,address[] wallets)";
+
+        assertEquals(dataEncoder.encodeType("Group"), expectedGroupType);
+    }
+
     // EIP712 v4
     @Test
     public void testValidStructureWithArrays() throws IOException {
@@ -229,10 +300,20 @@ public class StructuredDataTest {
                 new StructuredDataEncoder(
                         getResource(
                                 "build/resources/test/"
-                                        + "structured_data_json_files/ValidStructuredArrayData.json")); // taken from https://danfinlay.github.io/js-eth-personal-sign-examples/
+                                        + "structured_data_json_files/ValidStructuredArrayData.json")); // taken from https://danfinlay.github.io/js-eth-personal-sign-examples/ and updated to int,uint arrays
+
+        byte[] dataHash =
+                dataEncoder.hashMessage(
+                        dataEncoder.jsonMessageObject.getPrimaryType(),
+                        (HashMap<String, Object>) dataEncoder.jsonMessageObject.getMessage());
+
+        String expectedMessageStructHash =
+                "0xc1c7d7b7dab9a65b30a6e951923b2d54536778329712e2239ed8a3f2f5f2329f";
+
+        assertEquals(expectedMessageStructHash, Numeric.toHexString(dataHash));
 
         assertEquals(
-                "0xa85c2e2b118698e88db68a8105b794a8cc7cec074e89ef991cb4f5f533819cc2",
+                "0x935426a6009a3798ee87cd16ebeb9cea26b29d2d3762ac0951166d032f55d522",
                 Numeric.toHexString(dataEncoder.hashStructuredData()));
     }
 

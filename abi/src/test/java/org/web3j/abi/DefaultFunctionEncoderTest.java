@@ -14,10 +14,13 @@ package org.web3j.abi;
 
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
 
 import org.junit.jupiter.api.Test;
 
+import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Bool;
 import org.web3j.abi.datatypes.DynamicArray;
 import org.web3j.abi.datatypes.DynamicBytes;
@@ -56,6 +59,53 @@ public class DefaultFunctionEncoderTest {
     }
 
     @Test
+    public void testBuildMethodSignatureWithStructWithArray() {
+        assertEquals(
+                "structWithArray((uint256,address[]))",
+                DefaultFunctionEncoder.buildMethodSignature(
+                        "structWithArray",
+                        Arrays.asList(
+                                new AbiV2TestFixture.ArrayStruct(
+                                        BigInteger.ONE, Collections.emptyList()))));
+    }
+
+    @Test
+    public void testBuildMessageSignatureWithComplexTuple() {
+        AbiV2TestFixture.Nazz nazz =
+                new AbiV2TestFixture.Nazz(
+                        Arrays.asList(
+                                new AbiV2TestFixture.Nazzy(
+                                        Arrays.asList(
+                                                new AbiV2TestFixture.Foo("a", "b"),
+                                                new AbiV2TestFixture.Foo("c", "d"))),
+                                new AbiV2TestFixture.Nazzy(
+                                        Arrays.asList(
+                                                new AbiV2TestFixture.Foo("e", "f"),
+                                                new AbiV2TestFixture.Foo("g", "key")))),
+                        BigInteger.valueOf(100L));
+
+        assertEquals(
+                "someFunc((((string,string)[])[],uint256))",
+                FunctionEncoder.buildMethodSignature("someFunc", Arrays.asList(nazz)));
+
+        // correct handling of empty list of dynamic struct
+        AbiV2TestFixture.Nazz nazz2 =
+                new AbiV2TestFixture.Nazz(Collections.emptyList(), BigInteger.ZERO);
+
+        assertEquals(
+                "someFunc((((string,string)[])[],uint256))",
+                FunctionEncoder.buildMethodSignature("someFunc", Arrays.asList(nazz)));
+
+        // correct handling of empty list of static struct
+        AbiV2TestFixture.Barr barr =
+                new AbiV2TestFixture.Barr(Collections.emptyList(), BigInteger.ZERO);
+
+        assertEquals(
+                "someFunc(((uint256,uint256)[],uint256))",
+                FunctionEncoder.buildMethodSignature("someFunc", Arrays.asList(barr)));
+    }
+
+    @Test
     public void testEncodeConstructorEmpty() {
         assertEquals("", FunctionEncoder.encodeConstructor(Collections.emptyList()));
     }
@@ -78,6 +128,29 @@ public class DefaultFunctionEncoderTest {
                 FunctionEncoder.encodeConstructor(
                         Arrays.asList(
                                 new Uint(BigInteger.ONE), new Uint(BigInteger.valueOf(0x20)))));
+    }
+
+    @Test
+    public void testEncodeConstructorPacked_multipleParameters() {
+        assertEquals(
+                "00000045014772656574696e677321",
+                FunctionEncoder.encodeConstructorPacked(
+                        Arrays.asList(
+                                new Uint32(BigInteger.valueOf(69)),
+                                new Bool(true),
+                                new Utf8String("Greetings!"))));
+
+        assertEquals(
+                "783139457468657265756d205369676e6564204d6573736167653a"
+                        + "663e27adc18d862da9a82f060310621d379e469a"
+                        + "000000000000000000000000000000000000000000000000000000000000000a"
+                        + "31323334353637383930",
+                FunctionEncoder.encodeConstructorPacked(
+                        Arrays.asList(
+                                new Utf8String("x19Ethereum Signed Message:"),
+                                new Address("0x663e27AdC18d862dA9A82f060310621D379e469a"),
+                                new Uint256(BigInteger.TEN),
+                                new Bytes10("1234567890".getBytes()))));
     }
 
     @Test
@@ -771,5 +844,43 @@ public class DefaultFunctionEncoderTest {
                         + "0000000000000000000000000000000000000000000000000000000000000000";
 
         assertEquals(expected, FunctionEncoder.encode(AbiV2TestFixture.setBarDynamicArrayFunction));
+    }
+
+    @Test
+    public void testEncodeArrayOfStructWithArrays() {
+        String expected =
+                "0xfc3fdffb"
+                        + "0000000000000000000000000000000000000000000000000000000000000020"
+                        + "0000000000000000000000000000000000000000000000000000000000000002"
+                        + "0000000000000000000000000000000000000000000000000000000000000040"
+                        + "00000000000000000000000000000000000000000000000000000000000000e0"
+                        + "0000000000000000000000000000000000000000000000000000000000000001"
+                        + "0000000000000000000000000000000000000000000000000000000000000040"
+                        + "0000000000000000000000000000000000000000000000000000000000000002"
+                        + "0000000000000000000000000000000000000000000000000000000000000000"
+                        + "0000000000000000000000001111111111111111111111111111111111111111"
+                        + "000000000000000000000000000000000000000000000000000000000000000a"
+                        + "0000000000000000000000000000000000000000000000000000000000000040"
+                        + "0000000000000000000000000000000000000000000000000000000000000002"
+                        + "0000000000000000000000002222222222222222222222222222222222222222"
+                        + "0000000000000000000000003333333333333333333333333333333333333333";
+
+        assertEquals(
+                expected,
+                FunctionEncoder.encode(AbiV2TestFixture.setArrayOfStructWithArraysFunction));
+    }
+
+    @Test
+    public void testDynamicStructWithStaticStruct() {
+        String expected =
+                "0x3db2b680"
+                        + "0000000000000000000000000000000000000000000000000000000000000020"
+                        + "0000000000000000000000000000000000000000000000000000000000000001"
+                        + "000000000000000000000000000000000000000000000000000000000000000a"
+                        + "0000000000000000000000000000000000000000000000000000000000000060"
+                        + "0000000000000000000000000000000000000000000000000000000000000004"
+                        + "6461746100000000000000000000000000000000000000000000000000000000";
+
+        assertEquals(expected, FunctionEncoder.encode(AbiV2TestFixture.setQuxFunction));
     }
 }

@@ -45,13 +45,19 @@ public final class Numeric {
         }
 
         if (!isValidHexQuantity(value)) {
-            throw new MessageDecodingException("Value must be in format 0x[1-9]+[0-9]* or 0x0");
+            throw new MessageDecodingException("Value must be in format 0x[0-9a-fA-F]+");
         }
+
         try {
-            return new BigInteger(value.substring(2), 16);
+            return parsePaddedNumberHex(value);
         } catch (NumberFormatException e) {
             throw new MessageDecodingException("Negative ", e);
         }
+    }
+
+    public static BigInteger parsePaddedNumberHex(String value) {
+        String numWithoutLeadingZeros = cleanHexPrefix(value).replaceFirst("^0+(?!$)", "");
+        return new BigInteger(numWithoutLeadingZeros, 16);
     }
 
     private static boolean isLongValue(String value) {
@@ -63,7 +69,7 @@ public final class Numeric {
         }
     }
 
-    private static boolean isValidHexQuantity(String value) {
+    protected static boolean isValidHexQuantity(String value) {
         if (value == null) {
             return false;
         }
@@ -76,13 +82,7 @@ public final class Numeric {
             return false;
         }
 
-        // If TestRpc resolves the following issue, we can reinstate this code
-        // https://github.com/ethereumjs/testrpc/issues/220
-        // if (value.length() > 3 && value.charAt(2) == '0') {
-        //    return false;
-        // }
-
-        return true;
+        return value.matches("0[xX][0-9a-fA-F]+");
     }
 
     public static String cleanHexPrefix(String input) {
@@ -141,6 +141,11 @@ public final class Numeric {
         return toHexStringZeroPadded(value, size, true);
     }
 
+    /**
+     * @deprecated use {@link #toHexStringNoPrefix(BigInteger value)} instead, more details <a
+     *     href="https://github.com/web3j/web3j/pull/1679">here</a>
+     */
+    @Deprecated
     public static String toHexStringWithPrefixSafe(BigInteger value) {
         String result = toHexStringNoPrefix(value);
         if (result.length() < 2) {
@@ -228,13 +233,13 @@ public final class Numeric {
     }
 
     public static String toHexString(byte[] input, int offset, int length, boolean withPrefix) {
-        final String output = new String(toHexCharArray(input, offset, length, withPrefix));
+        final String output = new String(toHexCharArray(input, offset, length));
         return withPrefix ? new StringBuilder(HEX_PREFIX).append(output).toString() : output;
     }
 
-    private static char[] toHexCharArray(byte[] input, int offset, int length, boolean withPrefix) {
+    private static char[] toHexCharArray(byte[] input, int offset, int length) {
         final char[] output = new char[length << 1];
-        for (int i = offset, j = 0; i < length; i++, j++) {
+        for (int i = offset, j = 0; i < length + offset; i++, j++) {
             final int v = input[i] & 0xFF;
             output[j++] = HEX_CHAR_MAP[v >>> 4];
             output[j] = HEX_CHAR_MAP[v & 0x0F];
@@ -252,5 +257,9 @@ public final class Numeric {
 
     public static boolean isIntegerValue(BigDecimal value) {
         return value.signum() == 0 || value.scale() <= 0 || value.stripTrailingZeros().scale() <= 0;
+    }
+
+    public static String removeDoubleQuotes(String string) {
+        return string != null ? string.replace("\"", "") : null;
     }
 }

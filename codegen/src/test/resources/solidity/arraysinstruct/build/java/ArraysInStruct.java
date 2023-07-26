@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Bool;
@@ -30,7 +31,7 @@ import org.web3j.tx.gas.ContractGasProvider;
  * <p>Auto generated code.
  * <p><strong>Do not modify!</strong>
  * <p>Please use the <a href="https://docs.web3j.io/command_line.html">web3j command line tools</a>,
- * or the org.web3j.codegen.SolidityFunctionWrapperGenerator in the
+ * or the org.web3j.codegen.SolidityFunctionWrapperGenerator in the 
  * <a href="https://github.com/web3j/web3j/tree/master/codegen">codegen module</a> to update.
  *
  * <p>Generated with web3j version none.
@@ -61,11 +62,11 @@ public class ArraysInStruct extends Contract {
 
     public RemoteFunctionCall<TransactionReceipt> callFunction(List<byte[]> bytesArrayField, Entity newEntity) {
         final Function function = new Function(
-                FUNC_CALLFUNCTION,
+                FUNC_CALLFUNCTION, 
                 Arrays.<Type>asList(new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.DynamicBytes>(
                         org.web3j.abi.datatypes.DynamicBytes.class,
-                        org.web3j.abi.Utils.typeMap(bytesArrayField, org.web3j.abi.datatypes.DynamicBytes.class)),
-                newEntity),
+                        org.web3j.abi.Utils.typeMap(bytesArrayField, org.web3j.abi.datatypes.DynamicBytes.class)), 
+                newEntity), 
                 Collections.<TypeReference<?>>emptyList());
         return executeRemoteCallTransaction(function);
     }
@@ -130,59 +131,59 @@ public class ArraysInStruct extends Contract {
         public List<String> addressArrayFieldStatic;
 
         public Entity(byte[] bytesField, byte[] extraData, List<String> stringArrayField, List<byte[]> bytesArrayField, List<byte[]> bytes2ArrayField, List<byte[]> bytes32ArrayField, List<BigInteger> unitArrayField, List<BigInteger> unit256ArrayField, List<Boolean> boolField, List<BigInteger> intArrayField, List<String> addressArrayField, List<String> stringArrayFieldStatic, List<byte[]> bytesArrayFieldStatic, List<byte[]> bytes2ArrayFieldStatic, List<byte[]> bytes32ArrayFieldStatic, List<BigInteger> unitArrayFieldStatic, List<BigInteger> unit256ArrayFieldStatic, List<Boolean> boolFieldStatic, List<BigInteger> intArrayFieldStatic, List<String> addressArrayFieldStatic) {
-            super(new org.web3j.abi.datatypes.DynamicBytes(bytesField),
-                    new org.web3j.abi.datatypes.generated.Bytes32(extraData),
+            super(new org.web3j.abi.datatypes.DynamicBytes(bytesField), 
+                    new org.web3j.abi.datatypes.generated.Bytes32(extraData), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.Utf8String>(
                             org.web3j.abi.datatypes.Utf8String.class,
-                            org.web3j.abi.Utils.typeMap(stringArrayField, org.web3j.abi.datatypes.Utf8String.class)),
+                            org.web3j.abi.Utils.typeMap(stringArrayField, org.web3j.abi.datatypes.Utf8String.class)), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.DynamicBytes>(
                             org.web3j.abi.datatypes.DynamicBytes.class,
-                            org.web3j.abi.Utils.typeMap(bytesArrayField, org.web3j.abi.datatypes.DynamicBytes.class)),
+                            org.web3j.abi.Utils.typeMap(bytesArrayField, org.web3j.abi.datatypes.DynamicBytes.class)), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.generated.Bytes2>(
                             org.web3j.abi.datatypes.generated.Bytes2.class,
-                            org.web3j.abi.Utils.typeMap(bytes2ArrayField, org.web3j.abi.datatypes.generated.Bytes2.class)),
+                            org.web3j.abi.Utils.typeMap(bytes2ArrayField, org.web3j.abi.datatypes.generated.Bytes2.class)), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.generated.Bytes32>(
                             org.web3j.abi.datatypes.generated.Bytes32.class,
-                            org.web3j.abi.Utils.typeMap(bytes32ArrayField, org.web3j.abi.datatypes.generated.Bytes32.class)),
+                            org.web3j.abi.Utils.typeMap(bytes32ArrayField, org.web3j.abi.datatypes.generated.Bytes32.class)), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.generated.Uint256>(
                             org.web3j.abi.datatypes.generated.Uint256.class,
-                            org.web3j.abi.Utils.typeMap(unitArrayField, org.web3j.abi.datatypes.generated.Uint256.class)),
+                            org.web3j.abi.Utils.typeMap(unitArrayField, org.web3j.abi.datatypes.generated.Uint256.class)), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.generated.Uint256>(
                             org.web3j.abi.datatypes.generated.Uint256.class,
-                            org.web3j.abi.Utils.typeMap(unit256ArrayField, org.web3j.abi.datatypes.generated.Uint256.class)),
+                            org.web3j.abi.Utils.typeMap(unit256ArrayField, org.web3j.abi.datatypes.generated.Uint256.class)), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.Bool>(
                             org.web3j.abi.datatypes.Bool.class,
-                            org.web3j.abi.Utils.typeMap(boolField, org.web3j.abi.datatypes.Bool.class)),
+                            org.web3j.abi.Utils.typeMap(boolField, org.web3j.abi.datatypes.Bool.class)), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.generated.Int256>(
                             org.web3j.abi.datatypes.generated.Int256.class,
-                            org.web3j.abi.Utils.typeMap(intArrayField, org.web3j.abi.datatypes.generated.Int256.class)),
+                            org.web3j.abi.Utils.typeMap(intArrayField, org.web3j.abi.datatypes.generated.Int256.class)), 
                     new org.web3j.abi.datatypes.DynamicArray<org.web3j.abi.datatypes.Address>(
                             org.web3j.abi.datatypes.Address.class,
-                            org.web3j.abi.Utils.typeMap(addressArrayField, org.web3j.abi.datatypes.Address.class)),
+                            org.web3j.abi.Utils.typeMap(addressArrayField, org.web3j.abi.datatypes.Address.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.Utf8String>(
                             org.web3j.abi.datatypes.Utf8String.class,
-                            org.web3j.abi.Utils.typeMap(stringArrayFieldStatic, org.web3j.abi.datatypes.Utf8String.class)),
+                            org.web3j.abi.Utils.typeMap(stringArrayFieldStatic, org.web3j.abi.datatypes.Utf8String.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.DynamicBytes>(
                             org.web3j.abi.datatypes.DynamicBytes.class,
-                            org.web3j.abi.Utils.typeMap(bytesArrayFieldStatic, org.web3j.abi.datatypes.DynamicBytes.class)),
+                            org.web3j.abi.Utils.typeMap(bytesArrayFieldStatic, org.web3j.abi.datatypes.DynamicBytes.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.generated.Bytes2>(
                             org.web3j.abi.datatypes.generated.Bytes2.class,
-                            org.web3j.abi.Utils.typeMap(bytes2ArrayFieldStatic, org.web3j.abi.datatypes.generated.Bytes2.class)),
+                            org.web3j.abi.Utils.typeMap(bytes2ArrayFieldStatic, org.web3j.abi.datatypes.generated.Bytes2.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.generated.Bytes32>(
                             org.web3j.abi.datatypes.generated.Bytes32.class,
-                            org.web3j.abi.Utils.typeMap(bytes32ArrayFieldStatic, org.web3j.abi.datatypes.generated.Bytes32.class)),
+                            org.web3j.abi.Utils.typeMap(bytes32ArrayFieldStatic, org.web3j.abi.datatypes.generated.Bytes32.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.generated.Uint256>(
                             org.web3j.abi.datatypes.generated.Uint256.class,
-                            org.web3j.abi.Utils.typeMap(unitArrayFieldStatic, org.web3j.abi.datatypes.generated.Uint256.class)),
+                            org.web3j.abi.Utils.typeMap(unitArrayFieldStatic, org.web3j.abi.datatypes.generated.Uint256.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.generated.Uint256>(
                             org.web3j.abi.datatypes.generated.Uint256.class,
-                            org.web3j.abi.Utils.typeMap(unit256ArrayFieldStatic, org.web3j.abi.datatypes.generated.Uint256.class)),
+                            org.web3j.abi.Utils.typeMap(unit256ArrayFieldStatic, org.web3j.abi.datatypes.generated.Uint256.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.Bool>(
                             org.web3j.abi.datatypes.Bool.class,
-                            org.web3j.abi.Utils.typeMap(boolFieldStatic, org.web3j.abi.datatypes.Bool.class)),
+                            org.web3j.abi.Utils.typeMap(boolFieldStatic, org.web3j.abi.datatypes.Bool.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.generated.Int256>(
                             org.web3j.abi.datatypes.generated.Int256.class,
-                            org.web3j.abi.Utils.typeMap(intArrayFieldStatic, org.web3j.abi.datatypes.generated.Int256.class)),
+                            org.web3j.abi.Utils.typeMap(intArrayFieldStatic, org.web3j.abi.datatypes.generated.Int256.class)), 
                     new org.web3j.abi.datatypes.generated.StaticArray5<org.web3j.abi.datatypes.Address>(
                             org.web3j.abi.datatypes.Address.class,
                             org.web3j.abi.Utils.typeMap(addressArrayFieldStatic, org.web3j.abi.datatypes.Address.class)));
@@ -212,24 +213,24 @@ public class ArraysInStruct extends Contract {
             super(bytesField, extraData, stringArrayField, bytesArrayField, bytes2ArrayField, bytes32ArrayField, unitArrayField, unit256ArrayField, boolField, intArrayField, addressArrayField, stringArrayFieldStatic, bytesArrayFieldStatic, bytes2ArrayFieldStatic, bytes32ArrayFieldStatic, unitArrayFieldStatic, unit256ArrayFieldStatic, boolFieldStatic, intArrayFieldStatic, addressArrayFieldStatic);
             this.bytesField = bytesField.getValue();
             this.extraData = extraData.getValue();
-            this.stringArrayField = stringArrayField.getValue();
-            this.bytesArrayField = bytesArrayField.getValue();
-            this.bytes2ArrayField = bytes2ArrayField.getValue();
-            this.bytes32ArrayField = bytes32ArrayField.getValue();
-            this.unitArrayField = unitArrayField.getValue();
-            this.unit256ArrayField = unit256ArrayField.getValue();
-            this.boolField = boolField.getValue();
-            this.intArrayField = intArrayField.getValue();
-            this.addressArrayField = addressArrayField.getValue();
-            this.stringArrayFieldStatic = stringArrayFieldStatic.getValue();
-            this.bytesArrayFieldStatic = bytesArrayFieldStatic.getValue();
-            this.bytes2ArrayFieldStatic = bytes2ArrayFieldStatic.getValue();
-            this.bytes32ArrayFieldStatic = bytes32ArrayFieldStatic.getValue();
-            this.unitArrayFieldStatic = unitArrayFieldStatic.getValue();
-            this.unit256ArrayFieldStatic = unit256ArrayFieldStatic.getValue();
-            this.boolFieldStatic = boolFieldStatic.getValue();
-            this.intArrayFieldStatic = intArrayFieldStatic.getValue();
-            this.addressArrayFieldStatic = addressArrayFieldStatic.getValue();
+            this.stringArrayField = stringArrayField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.bytesArrayField = bytesArrayField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.bytes2ArrayField = bytes2ArrayField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.bytes32ArrayField = bytes32ArrayField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.unitArrayField = unitArrayField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.unit256ArrayField = unit256ArrayField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.boolField = boolField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.intArrayField = intArrayField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.addressArrayField = addressArrayField.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.stringArrayFieldStatic = stringArrayFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.bytesArrayFieldStatic = bytesArrayFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.bytes2ArrayFieldStatic = bytes2ArrayFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.bytes32ArrayFieldStatic = bytes32ArrayFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.unitArrayFieldStatic = unitArrayFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.unit256ArrayFieldStatic = unit256ArrayFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.boolFieldStatic = boolFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.intArrayFieldStatic = intArrayFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
+            this.addressArrayFieldStatic = addressArrayFieldStatic.getValue().stream().map(v -> v.getValue()).collect(Collectors.toList());
         }
     }
 }

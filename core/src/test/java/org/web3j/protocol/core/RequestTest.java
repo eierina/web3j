@@ -147,6 +147,22 @@ public class RequestTest extends RequestTester {
     }
 
     @Test
+    public void testEthMaxPriorityFeePerGas() throws Exception {
+        web3j.ethMaxPriorityFeePerGas().send();
+
+        verifyResult(
+                "{\"jsonrpc\":\"2.0\",\"method\":\"eth_maxPriorityFeePerGas\",\"params\":[],\"id\":1}");
+    }
+
+    @Test
+    public void testEthFeeHistory() throws Exception {
+        web3j.ethFeeHistory(1, DefaultBlockParameterName.LATEST, null).send();
+
+        verifyResult(
+                "{\"jsonrpc\":\"2.0\",\"method\":\"eth_feeHistory\",\"params\":[\"0x1\",\"latest\",null],\"id\":1}");
+    }
+
+    @Test
     public void testEthAccounts() throws Exception {
         web3j.ethAccounts().send();
 
@@ -414,6 +430,17 @@ public class RequestTest extends RequestTester {
     }
 
     @Test
+    public void testEthGetBlockReceipts() throws Exception {
+        web3j.ethGetBlockReceipts(DefaultBlockParameter.valueOf(BigInteger.valueOf(15455945)))
+                .send();
+
+        verifyResult(
+                "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBlockReceipts\",\"params\":["
+                        + "\"0xebd6c9\"],"
+                        + "\"id\":1}");
+    }
+
+    @Test
     public void testEthGetUncleByBlockHashAndIndex() throws Exception {
         web3j.ethGetUncleByBlockHashAndIndex(
                         "0xc6ef2fc5426d6ad6fd9e2a26abeab0aa2411b7ab17f30a99d3cb96aed1d1055b",
@@ -512,7 +539,7 @@ public class RequestTest extends RequestTester {
 
         verifyResult(
                 "{\"jsonrpc\":\"2.0\",\"method\":\"eth_uninstallFilter\","
-                        + "\"params\":[\"0x0b\"],\"id\":1}");
+                        + "\"params\":[\"0xb\"],\"id\":1}");
     }
 
     @Test
@@ -734,7 +761,7 @@ public class RequestTest extends RequestTester {
 
         verifyResult(
                 "{\"jsonrpc\":\"2.0\",\"method\":\"shh_uninstallFilter\","
-                        + "\"params\":[\"0x07\"],\"id\":1}");
+                        + "\"params\":[\"0x7\"],\"id\":1}");
     }
 
     @Test
@@ -743,7 +770,7 @@ public class RequestTest extends RequestTester {
 
         verifyResult(
                 "{\"jsonrpc\":\"2.0\",\"method\":\"shh_getFilterChanges\","
-                        + "\"params\":[\"0x07\"],\"id\":1}");
+                        + "\"params\":[\"0x7\"],\"id\":1}");
     }
 
     @Test
@@ -752,7 +779,7 @@ public class RequestTest extends RequestTester {
 
         verifyResult(
                 "{\"jsonrpc\":\"2.0\",\"method\":\"shh_getMessages\","
-                        + "\"params\":[\"0x07\"],\"id\":1}");
+                        + "\"params\":[\"0x7\"],\"id\":1}");
     }
 
     @Test

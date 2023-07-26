@@ -49,7 +49,9 @@ import org.web3j.protocol.exceptions.TransactionException;
 import org.web3j.tx.exceptions.ContractCallException;
 import org.web3j.tx.gas.ContractGasProvider;
 import org.web3j.tx.gas.DefaultGasProvider;
+import org.web3j.tx.gas.StaticEIP1559GasProvider;
 import org.web3j.tx.gas.StaticGasProvider;
+import org.web3j.tx.response.EmptyTransactionReceipt;
 import org.web3j.utils.Async;
 import org.web3j.utils.Numeric;
 
@@ -154,10 +156,43 @@ public class ContractTest extends ManagedTransactionTester {
     }
 
     @Test
-    public void testIsValidSkipMetadata() throws Exception {
+    public void testIsValidSkipMetadataBzzr0() throws Exception {
         prepareEthGetCode(
                 TEST_CONTRACT_BINARY
                         + "a165627a7a72305820"
+                        + "a9bc86938894dc250f6ea25dd823d4472fad6087edcda429a3504e3713a9fc880029");
+
+        Contract contract = deployContract(createTransactionReceipt());
+        assertTrue(contract.isValid());
+    }
+
+    @Test
+    public void testIsValidSkipMetadataBzzr1() throws Exception {
+        prepareEthGetCode(
+                TEST_CONTRACT_BINARY
+                        + "a265627a7a72315820"
+                        + "a9bc86938894dc250f6ea25dd823d4472fad6087edcda429a3504e3713a9fc880029");
+
+        Contract contract = deployContract(createTransactionReceipt());
+        assertTrue(contract.isValid());
+    }
+
+    @Test
+    public void testIsValidSkipMetadataIpfs() throws Exception {
+        prepareEthGetCode(
+                TEST_CONTRACT_BINARY
+                        + "a2646970667358221220"
+                        + "a9bc86938894dc250f6ea25dd823d4472fad6087edcda429a3504e3713a9fc880029");
+
+        Contract contract = deployContract(createTransactionReceipt());
+        assertTrue(contract.isValid());
+    }
+
+    @Test
+    public void testIsValidSkipMetadataNone() throws Exception {
+        prepareEthGetCode(
+                TEST_CONTRACT_BINARY
+                        + "a164736f6c634300080a000a"
                         + "a9bc86938894dc250f6ea25dd823d4472fad6087edcda429a3504e3713a9fc880029");
 
         Contract contract = deployContract(createTransactionReceipt());
@@ -484,6 +519,42 @@ public class ContractTest extends ManagedTransactionTester {
     }
 
     @Test
+    public void testStaticEIP1559GasProvider() throws IOException, TransactionException {
+        StaticEIP1559GasProvider gasProvider =
+                new StaticEIP1559GasProvider(1L, BigInteger.TEN, BigInteger.ZERO, BigInteger.ONE);
+        TransactionManager txManager = mock(TransactionManager.class);
+
+        when(txManager.executeTransaction(
+                        any(BigInteger.class),
+                        any(BigInteger.class),
+                        anyString(),
+                        anyString(),
+                        any(BigInteger.class),
+                        anyBoolean()))
+                .thenReturn(new TransactionReceipt());
+
+        contract = new TestContract(ADDRESS, web3j, txManager, gasProvider);
+
+        Function func =
+                new Function(
+                        "test",
+                        Collections.<Type>emptyList(),
+                        Collections.<TypeReference<?>>emptyList());
+        contract.executeTransaction(func);
+
+        verify(txManager)
+                .executeTransactionEIP1559(
+                        eq(1L),
+                        eq(BigInteger.ZERO),
+                        eq(BigInteger.TEN),
+                        eq(BigInteger.ONE),
+                        anyString(),
+                        anyString(),
+                        any(BigInteger.class),
+                        anyBoolean());
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     public void testInvalidTransactionReceipt() throws Throwable {
         prepareNonceRequest();
@@ -540,6 +611,19 @@ public class ContractTest extends ManagedTransactionTester {
 
         assertEquals(eventValuesWithLogs2.size(), 1);
         assertEquals(eventValuesWithLogs2.get(0).getLog(), logs.get(1));
+    }
+
+    @Test
+    public void testEmptyTransactionReceipt() throws Exception {
+        TransactionReceipt transactionReceipt = new EmptyTransactionReceipt(TRANSACTION_HASH);
+
+        prepareTransaction(transactionReceipt);
+
+        assertEquals(
+                transactionReceipt,
+                contract.performTransaction(
+                                new Address(BigInteger.TEN), new Uint256(BigInteger.ONE))
+                        .send());
     }
 
     void testErrorScenario() throws Throwable {

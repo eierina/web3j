@@ -15,7 +15,6 @@ package org.web3j.utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import org.web3j.exceptions.MessageDecodingException;
@@ -24,6 +23,7 @@ import org.web3j.exceptions.MessageEncodingException;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.web3j.utils.Numeric.asByte;
@@ -60,8 +60,8 @@ public class NumericTest {
     @Test
     public void testQuantityDecode() {
         assertEquals(Numeric.decodeQuantity("0x0"), (BigInteger.valueOf(0L)));
-        assertEquals(Numeric.decodeQuantity("0x400"), (BigInteger.valueOf((1024L))));
-        assertEquals(Numeric.decodeQuantity("0x0"), (BigInteger.valueOf((0L))));
+        assertEquals(Numeric.decodeQuantity("0x400"), (BigInteger.valueOf(1024L)));
+        assertEquals(Numeric.decodeQuantity("0x41"), (BigInteger.valueOf(65L)));
         assertEquals(
                 Numeric.decodeQuantity("0x7fffffffffffffff"),
                 (BigInteger.valueOf((Long.MAX_VALUE))));
@@ -74,15 +74,8 @@ public class NumericTest {
     public void testQuantityDecodeLeadingZero() {
         assertEquals(Numeric.decodeQuantity("0x0400"), (BigInteger.valueOf(1024L)));
         assertEquals(Numeric.decodeQuantity("0x001"), (BigInteger.valueOf(1L)));
-    }
-
-    // If TestRpc resolves the following issue, we can reinstate this code
-    // https://github.com/ethereumjs/testrpc/issues/220
-    @Disabled
-    @Test
-    public void testQuantityDecodeLeadingZeroException() {
-
-        assertThrows(MessageDecodingException.class, () -> Numeric.decodeQuantity("0x0400"));
+        assertEquals(Numeric.decodeQuantity("0x000"), (BigInteger.ZERO));
+        assertEquals(Numeric.decodeQuantity("0x00f"), (BigInteger.valueOf(15L)));
     }
 
     @Test
@@ -141,6 +134,9 @@ public class NumericTest {
     @Test
     public void testToHexStringWithPrefix() {
         assertEquals(Numeric.toHexStringWithPrefix(BigInteger.TEN), ("0xa"));
+        assertEquals(Numeric.toHexStringWithPrefix(BigInteger.valueOf(1024)), ("0x400"));
+        assertEquals(Numeric.toHexStringWithPrefix(BigInteger.valueOf(65)), ("0x41"));
+        assertEquals(Numeric.toHexStringWithPrefix(BigInteger.valueOf(0)), ("0x0"));
     }
 
     @Test
@@ -183,6 +179,10 @@ public class NumericTest {
         assertEquals(Numeric.toHexString(new byte[] {}), ("0x"));
         assertEquals(Numeric.toHexString(new byte[] {0x1}), ("0x01"));
         assertEquals(Numeric.toHexString(HEX_RANGE_ARRAY), (HEX_RANGE_STRING));
+        byte[] input = {(byte) 0x12, (byte) 0x34, (byte) 0x56, (byte) 0x78};
+        assertEquals(Numeric.toHexString(input, 0, input.length, false), ("12345678"));
+        assertEquals(Numeric.toHexString(input, 0, 2, false), ("1234"));
+        assertEquals(Numeric.toHexString(input, 2, 2, false), ("5678"));
     }
 
     @Test
@@ -256,5 +256,44 @@ public class NumericTest {
     public void testHandleNPE() {
         assertFalse(Numeric.containsHexPrefix(null));
         assertFalse(Numeric.containsHexPrefix(""));
+    }
+
+    @Test
+    void removeDoubleQuotes() {
+        String text = "Some text";
+        String textWithQuotes = "\"Some text\"";
+
+        assertEquals(text, Numeric.removeDoubleQuotes(textWithQuotes));
+    }
+
+    @Test
+    void removeDoubleQuotesWhenStrNull() {
+        assertNull(Numeric.removeDoubleQuotes(null));
+    }
+
+    @Test
+    void removeDoubleQuotesWhenStrEmpty() {
+        String text = "Some text";
+
+        assertEquals("", Numeric.removeDoubleQuotes(""));
+        assertEquals(" ", Numeric.removeDoubleQuotes(" "));
+        assertEquals(text, Numeric.removeDoubleQuotes(text));
+    }
+
+    @Test
+    void testIsValidHexQuantity() {
+
+        assertEquals(true, Numeric.isValidHexQuantity("0x0"));
+        assertEquals(true, Numeric.isValidHexQuantity("0x9"));
+        assertEquals(true, Numeric.isValidHexQuantity("0x123f"));
+        assertEquals(true, Numeric.isValidHexQuantity("0x419E"));
+        assertEquals(true, Numeric.isValidHexQuantity("0x975d"));
+        assertEquals(true, Numeric.isValidHexQuantity("0xDC449C1C16BA0"));
+        assertEquals(true, Numeric.isValidHexQuantity("0x419E"));
+
+        assertEquals(false, Numeric.isValidHexQuantity("419E"));
+        assertEquals(false, Numeric.isValidHexQuantity("0419E"));
+        assertEquals(false, Numeric.isValidHexQuantity("0x419Erf"));
+        assertEquals(false, Numeric.isValidHexQuantity("0x419fg"));
     }
 }

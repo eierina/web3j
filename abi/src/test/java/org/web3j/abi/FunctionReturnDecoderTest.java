@@ -31,6 +31,7 @@ import org.web3j.abi.datatypes.generated.Bytes16;
 import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.abi.datatypes.generated.StaticArray2;
 import org.web3j.abi.datatypes.generated.StaticArray3;
+import org.web3j.abi.datatypes.generated.StaticArray4;
 import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.crypto.Hash;
 import org.web3j.utils.Numeric;
@@ -278,6 +279,24 @@ public class FunctionReturnDecoderTest {
                 FunctionReturnDecoder.decode(
                         rawInput, AbiV2TestFixture.getFooFunction.getOutputParameters()),
                 Collections.singletonList(new AbiV2TestFixture.Foo("id", "name")));
+    }
+
+    @Test
+    public void testDecodeDynamicStruct3() {
+        AbiV2TestFixture.Nazz nazz =
+                new AbiV2TestFixture.Nazz(
+                        Collections.singletonList(
+                                new AbiV2TestFixture.Nazzy(
+                                        Arrays.asList(
+                                                new AbiV2TestFixture.Foo("a", "b"),
+                                                new AbiV2TestFixture.Foo("c", "d")))),
+                        new BigInteger("100"));
+        String rawInput = FunctionEncoder.encodeConstructor(Collections.singletonList(nazz));
+
+        List<Type> decoded =
+                FunctionReturnDecoder.decode(
+                        rawInput, AbiV2TestFixture.getNazzFunction.getOutputParameters());
+        assertEquals(Collections.singletonList(nazz).get(0).toString(), decoded.get(0).toString());
     }
 
     @Test
@@ -1236,5 +1255,65 @@ public class FunctionReturnDecoderTest {
                                         BigInteger.valueOf(123), BigInteger.valueOf(123)),
                                 new AbiV2TestFixture.Bar(
                                         BigInteger.valueOf(123), BigInteger.valueOf(123)))));
+    }
+
+    @Test
+    public void testDecodeTupleOfStaticArrays() {
+        List outputParameters = new ArrayList<TypeReference<Type>>();
+        outputParameters.addAll(
+                Arrays.asList(
+                        new TypeReference<StaticArray4<Utf8String>>() {},
+                        new TypeReference<StaticArray4<Uint256>>() {}));
+
+        // tuple of (strings string[4]{"", "", "", ""}, ints int[4]{0, 0, 0, 0})
+        String rawInput =
+                "0x"
+                        + "00000000000000000000000000000000000000000000000000000000000000a0" // strings array offset
+                        + "0000000000000000000000000000000000000000000000000000000000000000" // ints[0]
+                        + "0000000000000000000000000000000000000000000000000000000000000000" // ints[1]
+                        + "0000000000000000000000000000000000000000000000000000000000000000" // ints[2]
+                        + "0000000000000000000000000000000000000000000000000000000000000000" // ints[3]
+                        + "0000000000000000000000000000000000000000000000000000000000000080" // offset strings[0]
+                        + "00000000000000000000000000000000000000000000000000000000000000a0" // offset strings[1]
+                        + "00000000000000000000000000000000000000000000000000000000000000c0" // offset strings[2]
+                        + "00000000000000000000000000000000000000000000000000000000000000e0" // offset strings[3]
+                        + "0000000000000000000000000000000000000000000000000000000000000000" // strings[0]
+                        + "0000000000000000000000000000000000000000000000000000000000000000" // strings[1]
+                        + "0000000000000000000000000000000000000000000000000000000000000000" // strings[2]
+                        + "0000000000000000000000000000000000000000000000000000000000000000"; // strings[3]
+
+        assertEquals(
+                FunctionReturnDecoder.decode(rawInput, outputParameters),
+                Arrays.asList(
+                        new StaticArray4(
+                                Utf8String.class,
+                                new Utf8String(""),
+                                new Utf8String(""),
+                                new Utf8String(""),
+                                new Utf8String("")),
+                        new StaticArray4(
+                                Uint256.class,
+                                new Uint256(0),
+                                new Uint256(0),
+                                new Uint256(0),
+                                new Uint256(0))));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testDecodeDynamicStructWithStaticStruct() {
+        String rawInput =
+                "0x0000000000000000000000000000000000000000000000000000000000000020"
+                        + "0000000000000000000000000000000000000000000000000000000000000001"
+                        + "000000000000000000000000000000000000000000000000000000000000000a"
+                        + "0000000000000000000000000000000000000000000000000000000000000060"
+                        + "0000000000000000000000000000000000000000000000000000000000000004"
+                        + "6461746100000000000000000000000000000000000000000000000000000000";
+        assertEquals(
+                FunctionReturnDecoder.decode(
+                        rawInput, AbiV2TestFixture.getQuxFunction.getOutputParameters()),
+                Arrays.asList(
+                        new AbiV2TestFixture.Qux(
+                                new AbiV2TestFixture.Bar(BigInteger.ONE, BigInteger.TEN), "data")));
     }
 }

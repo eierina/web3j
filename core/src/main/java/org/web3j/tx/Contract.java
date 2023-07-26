@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,10 +45,13 @@ import org.web3j.protocol.core.RemoteFunctionCall;
 import org.web3j.protocol.core.methods.response.EthGetCode;
 import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.protocol.exceptions.JsonRpcError;
 import org.web3j.protocol.exceptions.TransactionException;
 import org.web3j.tx.exceptions.ContractCallException;
+import org.web3j.tx.gas.ContractEIP1559GasProvider;
 import org.web3j.tx.gas.ContractGasProvider;
 import org.web3j.tx.gas.StaticGasProvider;
+import org.web3j.tx.response.EmptyTransactionReceipt;
 import org.web3j.utils.Numeric;
 
 import static org.web3j.utils.RevertReasonExtractor.extractRevertReason;
@@ -73,6 +78,13 @@ public abstract class Contract extends ManagedTransaction {
     protected TransactionReceipt transactionReceipt;
     protected Map<String, String> deployedAddresses;
     protected DefaultBlockParameter defaultBlockParameter = DefaultBlockParameterName.LATEST;
+    private static final List<String> METADATA_HASH_INDICATORS =
+            Collections.unmodifiableList(
+                    Arrays.asList(
+                            "a165627a7a72305820" /*Swarm legacy (bzzr0)*/,
+                            "a265627a7a72315820" /*Swarm (bzzr1)*/,
+                            "a2646970667358221220" /*IPFS*/,
+                            "a164736f6c634300080a000a" /*solc (None)*/));
 
     protected Contract(
             String contractBinary,
@@ -251,9 +263,15 @@ public abstract class Contract extends ManagedTransaction {
         }
 
         String code = Numeric.cleanHexPrefix(ethGetCode.getCode());
-        int metadataIndex = code.indexOf("a165627a7a72305820");
-        if (metadataIndex != -1) {
-            code = code.substring(0, metadataIndex);
+
+        int metadataIndex = -1;
+        for (String metadataIndicator : METADATA_HASH_INDICATORS) {
+            metadataIndex = code.indexOf(metadataIndicator);
+
+            if (metadataIndex != -1) {
+                code = code.substring(0, metadataIndex);
+                break;
+            }
         }
         // There may be multiple contracts in the Solidity bytecode, hence we only check for a
         // match with a subset
@@ -293,6 +311,11 @@ public abstract class Contract extends ManagedTransaction {
         String value = call(contractAddress, encodedFunction, defaultBlockParameter);
 
         return FunctionReturnDecoder.decode(value, function.getOutputParameters());
+    }
+
+    protected String executeCallWithoutDecoding(Function function) throws IOException {
+        String encodedFunction = FunctionEncoder.encode(function);
+        return call(contractAddress, encodedFunction, defaultBlockParameter);
     }
 
     @SuppressWarnings("unchecked")
@@ -363,16 +386,50 @@ public abstract class Contract extends ManagedTransaction {
             String data, BigInteger weiValue, String funcName, boolean constructor)
             throws TransactionException, IOException {
 
-        TransactionReceipt receipt =
-                send(
-                        contractAddress,
-                        data,
-                        weiValue,
-                        gasProvider.getGasPrice(funcName),
-                        gasProvider.getGasLimit(funcName),
-                        constructor);
+        TransactionReceipt receipt = null;
+        try {
+            if (gasProvider instanceof ContractEIP1559GasProvider) {
+                ContractEIP1559GasProvider eip1559GasProvider =
+                        (ContractEIP1559GasProvider) gasProvider;
+                if (eip1559GasProvider.isEIP1559Enabled()) {
+                    receipt =
+                            sendEIP1559(
+                                    eip1559GasProvider.getChainId(),
+                                    contractAddress,
+                                    data,
+                                    weiValue,
+                                    eip1559GasProvider.getGasLimit(funcName),
+                                    eip1559GasProvider.getMaxPriorityFeePerGas(funcName),
+                                    eip1559GasProvider.getMaxFeePerGas(funcName),
+                                    constructor);
+                }
+            }
 
-        if (!receipt.isStatusOK()) {
+            if (receipt == null) {
+                receipt =
+                        send(
+                                contractAddress,
+                                data,
+                                weiValue,
+                                gasProvider.getGasPrice(funcName),
+                                gasProvider.getGasLimit(funcName),
+                                constructor);
+            }
+        } catch (JsonRpcError error) {
+
+            if (error.getData() != null) {
+                throw new TransactionException(error.getData().toString());
+            } else {
+                throw new TransactionException(
+                        String.format(
+                                "JsonRpcError thrown with code %d. Message: %s",
+                                error.getCode(), error.getMessage()));
+            }
+        }
+
+        if (!(receipt instanceof EmptyTransactionReceipt)
+                && receipt != null
+                && !receipt.isStatusOK()) {
             throw new TransactionException(
                     String.format(
                             "Transaction %s has failed with status: %s. "
@@ -383,7 +440,7 @@ public abstract class Contract extends ManagedTransaction {
                             receipt.getGasUsedRaw() != null
                                     ? receipt.getGasUsed().toString()
                                     : "unknown",
-                            extractRevertReason(receipt, data, web3j, true)),
+                            extractRevertReason(receipt, data, web3j, true, weiValue)),
                     receipt);
         }
         return receipt;
@@ -745,6 +802,14 @@ public abstract class Contract extends ManagedTransaction {
             Event event, TransactionReceipt transactionReceipt) {
         return transactionReceipt.getLogs().stream()
                 .map(log -> extractEventParametersWithLog(event, log))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    protected static List<EventValuesWithLog> staticExtractEventParametersWithLog(
+            Event event, TransactionReceipt transactionReceipt) {
+        return transactionReceipt.getLogs().stream()
+                .map(log -> staticExtractEventParametersWithLog(event, log))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }

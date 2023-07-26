@@ -12,7 +12,9 @@
  */
 package org.web3j.crypto;
 
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.SignatureException;
 import java.util.Arrays;
 
@@ -28,8 +30,6 @@ import org.bouncycastle.math.ec.custom.sec.SecP256K1Curve;
 import org.web3j.utils.Numeric;
 
 import static org.bouncycastle.util.BigIntegers.TWO;
-import static org.web3j.crypto.SignatureDataOperations.CHAIN_ID_INC;
-import static org.web3j.crypto.SignatureDataOperations.LOWER_REAL_V;
 import static org.web3j.utils.Assertions.verifyPrecondition;
 
 /**
@@ -42,6 +42,12 @@ import static org.web3j.utils.Assertions.verifyPrecondition;
 public class Sign {
 
     public static final X9ECParameters CURVE_PARAMS = CustomNamedCurves.getByName("secp256k1");
+    public static final int CHAIN_ID_INC = 35;
+    public static final int LOWER_REAL_V = 27;
+    // The v signature parameter starts at 37 because 1 is the first valid chainId so:
+    // chainId >= 1 implies that 2 * chainId + CHAIN_ID_INC >= 37.
+    // https://eips.ethereum.org/EIPS/eip-155
+    public static final int REPLAY_PROTECTED_V_MIN = 37;
     static final ECDomainParameters CURVE =
             new ECDomainParameters(
                     CURVE_PARAMS.getCurve(),
@@ -53,7 +59,9 @@ public class Sign {
     static final String MESSAGE_PREFIX = "\u0019Ethereum Signed Message:\n";
 
     static byte[] getEthereumMessagePrefix(int messageLength) {
-        return MESSAGE_PREFIX.concat(String.valueOf(messageLength)).getBytes();
+        return MESSAGE_PREFIX
+                .concat(String.valueOf(messageLength))
+                .getBytes(StandardCharsets.UTF_8);
     }
 
     public static byte[] getEthereumMessageHash(byte[] message) {
@@ -74,6 +82,14 @@ public class Sign {
         return signMessage(message, keyPair, true);
     }
 
+    public static SignatureData signTypedData(String jsonData, ECKeyPair keyPair)
+            throws IOException {
+        StructuredDataEncoder dataEncoder = new StructuredDataEncoder(jsonData);
+        byte[] hashStructuredData = dataEncoder.hashStructuredData();
+
+        return signMessage(hashStructuredData, keyPair, false);
+    }
+
     public static SignatureData signMessage(byte[] message, ECKeyPair keyPair, boolean needToHash) {
         BigInteger publicKey = keyPair.getPublicKey();
         byte[] messageHash;
@@ -88,6 +104,11 @@ public class Sign {
         return createSignatureData(sig, publicKey, messageHash);
     }
 
+    /**
+     * Signature without EIP-155 (Simple replay attack protection)
+     * https://eips.ethereum.org/EIPS/eip-155 To add EIP-155 call
+     * TransactionEncoder.createEip155SignatureData after that.
+     */
     public static Sign.SignatureData createSignatureData(
             ECDSASignature sig, BigInteger publicKey, byte[] messageHash) {
         // Now we have to work backwards to figure out the recId needed to recover the signature.
@@ -136,7 +157,7 @@ public class Sign {
      * @return An ECKey containing only the public part, or null if recovery wasn't possible.
      */
     public static BigInteger recoverFromSignature(int recId, ECDSASignature sig, byte[] message) {
-        verifyPrecondition(recId >= 0, "recId must be positive");
+        verifyPrecondition(recId >= 0 && recId <= 3, "recId must be in the range of [0, 3]");
         verifyPrecondition(sig.r.signum() >= 0, "r must be positive");
         verifyPrecondition(sig.s.signum() >= 0, "s must be positive");
         verifyPrecondition(message != null, "message cannot be null");
@@ -283,13 +304,16 @@ public class Sign {
         BigInteger v = Numeric.toBigInt(signatureData.getV());
         BigInteger lowerRealV = BigInteger.valueOf(LOWER_REAL_V);
         BigInteger lowerRealVPlus1 = BigInteger.valueOf(LOWER_REAL_V + 1);
+        BigInteger lowerRealVReplayProtected = BigInteger.valueOf(REPLAY_PROTECTED_V_MIN);
         BigInteger chainIdInc = BigInteger.valueOf(CHAIN_ID_INC);
         if (v.equals(lowerRealV) || v.equals(lowerRealVPlus1)) {
             return v.subtract(lowerRealV).intValue();
-        } else if (v.compareTo(chainIdInc) > 0) {
-            return v.subtract(BigInteger.valueOf(chainId).multiply(TWO)).add(chainIdInc).intValue();
+        } else if (v.compareTo(lowerRealVReplayProtected) >= 0) {
+            return v.subtract(BigInteger.valueOf(chainId).multiply(TWO))
+                    .subtract(chainIdInc)
+                    .intValue();
         } else {
-            throw new RuntimeException(String.format("Unsupported format exception", v));
+            throw new IllegalArgumentException(String.format("Unsupported v parameter: %s", v));
         }
     }
 
